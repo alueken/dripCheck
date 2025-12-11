@@ -539,61 +539,65 @@
     const dripMessage = document.getElementById("drip-message");
     const webcamContainer = document.getElementById("webcam-container");
 
-    async function init() {
-      try {
-        statusText.textContent = "Loading model...";
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+async function init() {
+  try {
+    statusText.textContent = "Loading model...";
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
 
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+    console.log("Trying to load model from:", modelURL);
+    console.log("Trying to load metadata from:", metadataURL);
 
-        // Setup webcam
-        webcam = new tmImage.Webcam(260, 260, true); // width, height, flip
-        await webcam.setup(); // request access
-        await webcam.play();
-        isRunning = true;
-        window.requestAnimationFrame(loop);
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
 
-        // Clear placeholder and add canvas
-        webcamContainer.innerHTML = "";
-        webcamContainer.appendChild(webcam.canvas);
+    // Setup webcam
+    webcam = new tmImage.Webcam(260, 260, true); // width, height, flip
+    await webcam.setup(); // request access
+    await webcam.play();
+    isRunning = true;
+    window.requestAnimationFrame(loop);
 
-        // Setup label container rows
-        labelContainer = document.getElementById("label-container");
-        labelContainer.innerHTML = "";
-        for (let i = 0; i < maxPredictions; i++) {
-          const row = document.createElement("div");
-          row.className = "bar-row";
+    // Clear placeholder and add canvas
+    webcamContainer.innerHTML = "";
+    webcamContainer.appendChild(webcam.canvas);
 
-          const labelSpan = document.createElement("span");
-          labelSpan.className = "bar-label";
-          labelSpan.textContent = "Class " + (i + 1);
+    // Setup label container rows
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "";
+    for (let i = 0; i < maxPredictions; i++) {
+      const row = document.createElement("div");
+      row.className = "bar-row";
 
-          const track = document.createElement("div");
-          track.className = "bar-track";
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "bar-label";
+      labelSpan.textContent = "Class " + (i + 1);
 
-          const fill = document.createElement("div");
-          fill.className = "bar-fill";
-          track.appendChild(fill);
+      const track = document.createElement("div");
+      track.className = "bar-track";
 
-          const percentSpan = document.createElement("span");
-          percentSpan.className = "bar-percent";
-          percentSpan.textContent = "0%";
+      const fill = document.createElement("div");
+      fill.className = "bar-fill";
+      track.appendChild(fill);
 
-          row.appendChild(labelSpan);
-          row.appendChild(track);
-          row.appendChild(percentSpan);
-          labelContainer.appendChild(row);
-        }
+      const percentSpan = document.createElement("span");
+      percentSpan.className = "bar-percent";
+      percentSpan.textContent = "0%";
 
-        statusText.textContent = "Live and predicting";
-      } catch (err) {
-        console.error(err);
-        statusText.textContent = "Error loading model";
-        dripMessage.textContent = "There was a problem loading the model. Check that the my_model folder and files are in the same repo as this page.";
-      }
+      row.appendChild(labelSpan);
+      row.appendChild(track);
+      row.appendChild(percentSpan);
+      labelContainer.appendChild(row);
     }
+
+    statusText.textContent = "Live and predicting";
+  } catch (err) {
+    console.error("Error while loading the model:", err);
+    statusText.textContent = "Error loading model";
+    dripMessage.textContent = "There was a problem loading the model. Check that the 'my_model' folder with model.json and metadata.json is in the same repo and pushed to GitHub.";
+  }
+}
+
 
     async function loop() {
       if (!isRunning) return;
