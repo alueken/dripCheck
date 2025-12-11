@@ -1,59 +1,640 @@
-<div>Teachable Machine Image Model</div>
-<button type="button" onclick="init()">Start</button>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script type="text/javascript">
-    // More API functions here:
-    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drip Detector | Teachable Machine Fashion Rater</title>
 
-    // the link to your model provided by Teachable Machine export panel
-    const URL = "./my_model/";
+  <!-- Basic styling: professional but fun -->
+  <style>
+    :root {
+      --bg1: #0f172a;
+      --bg2: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --card: #020617;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --radius-lg: 20px;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 60%);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .page {
+      max-width: 1100px;
+      width: 100%;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 28px 26px 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.15fr);
+      gap: 26px;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 30% 20%, #f97316, #22c55e, #3b82f6);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    }
+
+    .logo-icon::before {
+      content: "💧";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      filter: drop-shadow(0 0 6px rgba(15, 23, 42, 0.9));
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: clamp(1.3rem, 2vw, 1.6rem);
+      letter-spacing: 0.04em;
+    }
+
+    .title-block p {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .tag {
+      font-size: 0.74rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .left {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      justify-content: center;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.18), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(147,51,234,0.24), transparent 50%),
+                  var(--card);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      padding: 18px 18px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(248, 250, 252, 0.08), transparent 55%);
+      mix-blend-mode: soft-light;
+      pointer-events: none;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .card p {
+      margin: 0 0 10px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .card ul, .card ol {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    .card li {
+      margin-bottom: 4px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .pill {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: var(--text-main);
+    }
+
+    .pill strong {
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .note {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(148, 163, 184, 0.28);
+      padding-top: 6px;
+    }
+
+    .note strong {
+      color: #e5e7eb;
+    }
+
+    .right {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .live-card {
+      background: radial-gradient(circle at top, rgba(56,189,248,0.18), transparent 55%),
+                  var(--card);
+      border-radius: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 16px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .live-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .live-header h2 {
+      margin: 0;
+      font-size: 0.96rem;
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      animation: pulse 1.4s infinite;
+    }
+
+    @keyframes pulse {
+      0%   { transform: scale(1); opacity: 0.9; }
+      50%  { transform: scale(1.45); opacity: 0.3; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+
+    .webcam-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    #webcam-container {
+      width: 260px;
+      height: 260px;
+      border-radius: 22px;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.7), rgba(15,23,42, 1));
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #webcam-container canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .prediction-panel {
+      flex: 1;
+      min-width: 210px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 10px 11px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .primary-score {
+      font-size: 0.86rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(56, 189, 248, 0.8);
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      width: fit-content;
+    }
+
+    .primary-score strong {
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #drip-message {
+      font-size: 0.88rem;
+      color: var(--text-main);
+    }
+
+    .bars {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .bar-label {
+      min-width: 90px;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(30, 64, 175, 0.7);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #22c55e, #38bdf8);
+      transition: width 0.3s ease-out;
+    }
+
+    .bar-percent {
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #startButton {
+      background: linear-gradient(135deg, #38bdf8, #22c55e);
+      color: #020617;
+      box-shadow: 0 10px 24px rgba(56, 189, 248, 0.6);
+    }
+
+    #resetButton {
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text-muted);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    button span.icon {
+      font-size: 1rem;
+    }
+
+    .video-req {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .video-req ul {
+      margin: 4px 0 0;
+      padding-left: 18px;
+    }
+
+    .video-req li {
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <!-- LEFT SIDE: Project explanation and instructions -->
+    <section class="left">
+      <header>
+        <div class="logo-wrap">
+          <div class="logo-icon"></div>
+          <div class="title-block">
+            <h1>Drip Detector</h1>
+            <p>Teachable Machine powered outfit rater</p>
+          </div>
+        </div>
+        <div class="tag">VHHS · Final Project</div>
+      </header>
+
+      <section class="card" aria-labelledby="problem-title">
+        <h2 id="problem-title">What problem are you solving?</h2>
+        <p>
+          Getting dressed should be fun, not stressful. Drip Detector uses a Teachable Machine 
+          image model to give playful feedback on how strong your outfit is in real time using your webcam.
+        </p>
+        <p>
+          This project is designed for high school students who:
+        </p>
+        <ul>
+          <li>Want quick outfit feedback before school or events</li>
+          <li>Like experimenting with style and seeing how AI reads it</li>
+          <li>Are curious about how machine learning can spot clothing patterns</li>
+        </ul>
+        <div class="pill-row">
+          <div class="pill"><strong>Tech:</strong> Teachable Machine · TensorFlow.js</div>
+          <div class="pill"><strong>Division:</strong> Technology · Art</div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="instructions-title">
+        <h2 id="instructions-title">How to use the Drip Detector</h2>
+        <ol>
+          <li>Make sure you are in good lighting and your top, bottom, and outerwear are visible.</li>
+          <li>Click <strong>Start Drip Check</strong> and allow the browser to use your camera.</li>
+          <li>Stand back so your outfit fits in the frame and hold a natural pose.</li>
+          <li>Read your drip rating and message on the right side.</li>
+          <li>Try different outfits and see how the predictions change.</li>
+        </ol>
+        <p class="note">
+          <strong>Model details:</strong> This Teachable Machine model has at least three classes:  
+          <em>Nice Jacket, Nice Shorts, Nice Sweatshirt/Crewneck, Undetected, Nice Pants, Nice Shirt, Bad Fit</em>.  
+          The website runs the exported model fully in the browser.
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="video-title">
+        <h2 id="video-title">Final project video checklist</h2>
+        <p>
+          In my 1 to 2 minute video, I will:
+        </p>
+        <ul>
+          <li>Explain the problem: fast, low pressure outfit feedback for HS students</li>
+          <li>Show my Teachable Machine training process with all 7 classes</li>
+          <li>Demonstrate this live website running the model in the browser</li>
+        </ul>
+        <p class="note">
+          This site is hosted on GitHub Pages so it is a live website, not just a local file.
+        </p>
+      </section>
+    </section>
+
+    <!-- RIGHT SIDE: Live model area -->
+    <section class="right" aria-label="Live drip rating demo">
+      <div class="live-card">
+        <div class="live-header">
+          <h2>Live Drip Rating</h2>
+          <div class="status-dot">
+            <span class="dot"></span>
+            <span id="status-text">Model not loaded</span>
+          </div>
+        </div>
+
+        <div class="webcam-row">
+          <div id="webcam-container">
+            <span style="font-size:0.9rem; color:var(--text-muted); text-align:center; padding:10px;">
+              Webcam preview will appear here
+            </span>
+          </div>
+
+          <div class="prediction-panel">
+            <div class="primary-score">
+              <span class="icon">💧</span>
+              <strong id="top-label">No rating yet</strong>
+              <span id="top-score">0%</span>
+            </div>
+            <p id="drip-message">
+              Click “Start Drip Check” and let the AI judge the fit.
+            </p>
+
+            <div id="label-container" class="bars">
+              <!-- Filled by JavaScript with all 7 classes -->
+            </div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="startButton" type="button">
+            <span class="icon">▶</span>
+            <span>Start Drip Check</span>
+          </button>
+          <button id="resetButton" type="button">
+            <span class="icon">⟳</span>
+            <span>Reset</span>
+          </button>
+        </div>
+
+        <div class="video-req">
+          <strong>Tip for my video:</strong>
+          I can screen record this section while talking through how the predictions change when I change my outfit.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Teachable Machine scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+  <script type="text/javascript">
+    const URL = "./my_model/"; // folder with model.json, metadata.json etc
 
     let model, webcam, labelContainer, maxPredictions;
+    let isRunning = false;
 
-    // Load the image model and setup the webcam
+    const statusText = document.getElementById("status-text");
+    const topLabel = document.getElementById("top-label");
+    const topScore = document.getElementById("top-score");
+    const dripMessage = document.getElementById("drip-message");
+    const webcamContainer = document.getElementById("webcam-container");
+
     async function init() {
+      try {
+        statusText.textContent = "Loading model...";
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // or files from your local hard drive
-        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
         model = await tmImage.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
 
-        // Convenience function to setup a webcam
-        const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
+        // Setup webcam
+        webcam = new tmImage.Webcam(260, 260, true); // width, height, flip
+        await webcam.setup(); // request access
         await webcam.play();
+        isRunning = true;
         window.requestAnimationFrame(loop);
 
-        // append elements to the DOM
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        // Clear placeholder and add canvas
+        webcamContainer.innerHTML = "";
+        webcamContainer.appendChild(webcam.canvas);
+
+        // Setup label container rows
         labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
-            labelContainer.appendChild(document.createElement("div"));
+        labelContainer.innerHTML = "";
+        for (let i = 0; i < maxPredictions; i++) {
+          const row = document.createElement("div");
+          row.className = "bar-row";
+
+          const labelSpan = document.createElement("span");
+          labelSpan.className = "bar-label";
+          labelSpan.textContent = "Class " + (i + 1);
+
+          const track = document.createElement("div");
+          track.className = "bar-track";
+
+          const fill = document.createElement("div");
+          fill.className = "bar-fill";
+          track.appendChild(fill);
+
+          const percentSpan = document.createElement("span");
+          percentSpan.className = "bar-percent";
+          percentSpan.textContent = "0%";
+
+          row.appendChild(labelSpan);
+          row.appendChild(track);
+          row.appendChild(percentSpan);
+          labelContainer.appendChild(row);
         }
+
+        statusText.textContent = "Live and predicting";
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "Error loading model";
+        dripMessage.textContent = "There was a problem loading the model. Check that the my_model folder and files are in the same repo as this page.";
+      }
     }
 
     async function loop() {
-        webcam.update(); // update the webcam frame
-        await predict();
-        window.requestAnimationFrame(loop);
+      if (!isRunning) return;
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
     }
 
-    // run the webcam image through the image model
     async function predict() {
-        // predict can take in an image, video or canvas html element
-        const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
-        }
+      if (!model || !webcam) return;
+
+      const prediction = await model.predict(webcam.canvas);
+
+      // Sort by probability descending
+      prediction.sort((a, b) => b.probability - a.probability);
+
+      let best = prediction[0];
+      let bestClass = best.className;
+      let bestProb = best.probability;
+
+      // Update top label and score
+      topLabel.textContent = bestClass;
+      topScore.textContent = Math.round(bestProb * 100) + "%";
+
+      // Update bars
+      const rows = labelContainer.getElementsByClassName("bar-row");
+      for (let i = 0; i < prediction.length && i < rows.length; i++) {
+        const row = rows[i];
+        const labelSpan = row.querySelector(".bar-label");
+        const fill = row.querySelector(".bar-fill");
+        const percentSpan = row.querySelector(".bar-percent");
+
+        labelSpan.textContent = prediction[i].className;
+        const percent = Math.round(prediction[i].probability * 100);
+        fill.style.width = percent + "%";
+        percentSpan.textContent = percent + "%";
+      }
+
+      // Set a lightly funny but appropriate message for HS kids
+      dripMessage.textContent = getDripMessage(bestClass, bestProb);
     }
-</script>
+
+    function getDripMessage(label, prob) {
+      const p = M
